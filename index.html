@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>경신 조직문화 점수</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+    background: #f5f2ec;
+    color: #2b3a5c;
+    padding: 16px;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 520px; margin: 0 auto; }
+  .tabs { display: flex; background: #ece7dd; border-radius: 14px; padding: 5px; margin-bottom: 24px; }
+  .tab {
+    flex: 1; text-align: center; padding: 14px 0;
+    font-size: 1.15rem; font-weight: 700; border-radius: 10px;
+    cursor: pointer; color: #2b3a5c;
+  }
+  .tab.active { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .question { text-align: center; font-size: 1.35rem; font-weight: 700; line-height: 1.5; margin: 24px 0 32px; }
+  .circles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 12px; }
+  .circle {
+    aspect-ratio: 1; border-radius: 50%;
+    background: #fff; border: 2px solid #e3ddd0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; font-weight: 700; cursor: pointer; transition: all 0.15s;
+  }
+  .circle.selected { background: #c9962e; border-color: #c9962e; color: #fff; }
+  .scale-hint { display: flex; justify-content: space-between; color: #9a917f; font-size: 0.95rem; margin-bottom: 32px; }
+  .btn-submit {
+    width: 100%; padding: 20px 0;
+    background: #2b3a5c; color: #fff;
+    font-size: 1.3rem; font-weight: 700;
+    border: none; border-radius: 12px; cursor: pointer; font-family: inherit;
+  }
+  .btn-submit:disabled { opacity: 0.55; }
+  .msg { text-align: center; margin-top: 18px; font-size: 1.05rem; font-weight: 600; min-height: 1.5em; }
+  .msg.error { color: #c0392b; }
+  .msg.ok { color: #2e7d46; }
+
+  .result-card {
+    background: #fff; border: 1px solid #e3ddd0; border-radius: 20px;
+    padding: 36px 24px; text-align: center; margin-bottom: 20px;
+  }
+  .ring-box { position: relative; width: 240px; height: 240px; margin: 0 auto 20px; }
+  .ring-box svg { transform: rotate(-90deg); }
+  .ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .avg-num { font-size: 3.4rem; font-weight: 800; color: #2b3a5c; line-height: 1.1; }
+  .avg-max { font-size: 1.2rem; color: #9a917f; }
+  .result-sub { font-size: 1.1rem; font-weight: 600; }
+  .result-sub .hint { color: #9a917f; font-weight: 400; }
+
+  .dist-card { background: #fff; border: 1px solid #e3ddd0; border-radius: 20px; padding: 20px; margin-bottom: 20px; }
+  .dist-title { font-size: 0.95rem; color: #9a917f; margin-bottom: 14px; font-weight: 600; }
+  .dist-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+  .dist-row .lbl { width: 26px; text-align: right; font-weight: 700; font-size: 0.95rem; }
+  .dist-row .track { flex: 1; background: #f0ece3; border-radius: 6px; height: 18px; overflow: hidden; }
+  .dist-row .fill { height: 100%; background: #c9962e; border-radius: 6px; transition: width 0.4s; }
+  .dist-row .cnt { width: 30px; font-size: 0.9rem; color: #9a917f; }
+
+  .btn-refresh {
+    width: 100%; padding: 18px 0;
+    background: #fff; border: 1px solid #d8d2c4; border-radius: 12px;
+    font-size: 1.2rem; font-weight: 700; color: #2b3a5c;
+    cursor: pointer; font-family: inherit; margin-bottom: 20px;
+  }
+  .reset-link {
+    display: block; text-align: center;
+    color: #9a917f; text-decoration: underline;
+    font-size: 1rem; cursor: pointer;
+    background: none; border: none; font-family: inherit; margin: 0 auto;
+  }
+  .spin {
+    display: inline-block; width: 18px; height: 18px;
+    border: 3px solid rgba(255,255,255,0.4); border-top-color: #fff;
+    border-radius: 50%; animation: sp 0.7s linear infinite;
+    vertical-align: -3px; margin-right: 8px;
+  }
+  @keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="tabs">
+    <div class="tab active" id="tabInput">점수 입력</div>
+    <div class="tab" id="tabResult">결과 보기</div>
+  </div>
+
+  <div class="page active" id="pageInput">
+    <div class="question">내가 생각하는 경신그룹의 조직문화는 몇점?(대인관계측면)</div>
+    <div class="circles" id="circles"></div>
+    <div class="scale-hint"><span>1 = 매우 낮음</span><span>10 = 매우 높음</span></div>
+    <button class="btn-submit" id="submitBtn">제출하기</button>
+    <div class="msg" id="inputMsg"></div>
+  </div>
+
+  <div class="page" id="pageResult">
+    <div class="result-card">
+      <div class="ring-box">
+        <svg width="240" height="240" viewBox="0 0 240 240">
+          <circle cx="120" cy="120" r="104" fill="none" stroke="#f0ece3" stroke-width="20"/>
+          <circle id="ring" cx="120" cy="120" r="104" fill="none" stroke="#c9962e" stroke-width="20"
+                  stroke-linecap="round" stroke-dasharray="653.5" stroke-dashoffset="653.5"
+                  style="transition: stroke-dashoffset 0.6s ease"/>
+        </svg>
+        <div class="ring-center">
+          <div class="avg-num" id="avgNum">0.0</div>
+          <div class="avg-max">/ 10</div>
+        </div>
+      </div>
+      <div class="result-sub" id="resultSub">데이터를 불러오는 중...</div>
+    </div>
+    <div class="dist-card" id="distCard" style="display:none">
+      <div class="dist-title">점수 분포</div>
+      <div id="distRows"></div>
+    </div>
+    <button class="btn-refresh" id="refreshBtn">새로고침</button>
+    <button class="reset-link" id="resetBtn">전체 데이터 초기화</button>
+  </div>
+</div>
+
+<script>
+  // ★★★ 여기에 본인의 Apps Script 웹 앱 URL(…/exec)을 넣으세요 ★★★
+  var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzn_6Sl4uxqbGMlPegSW5tcyvI-uEnJaB1ETJBH9sZPp11mSNKIQnp7uP4ig1WVXV3p/exec';
+
+  var selected = null;
+  var submitting = false;
+  var autoTimer = null;
+  var lastRound = null;
+
+  // 1~10 원형 버튼
+  (function () {
+    var box = document.getElementById('circles');
+    for (var i = 1; i <= 10; i++) {
+      (function (n) {
+        var c = document.createElement('div');
+        c.className = 'circle';
+        c.textContent = n;
+        c.onclick = function () {
+          selected = n;
+          var all = box.children;
+          for (var j = 0; j < all.length; j++) all[j].classList.remove('selected');
+          c.classList.add('selected');
+          setMsg('', '');
+        };
+        box.appendChild(c);
+      })(i);
+    }
+  })();
+
+  function setMsg(text, type) {
+    var m = document.getElementById('inputMsg');
+    m.textContent = text;
+    m.className = 'msg ' + (type || '');
+  }
+
+  function showPage(which) {
+    document.getElementById('pageInput').classList.toggle('active', which === 'input');
+    document.getElementById('pageResult').classList.toggle('active', which === 'result');
+    document.getElementById('tabInput').classList.toggle('active', which === 'input');
+    document.getElementById('tabResult').classList.toggle('active', which === 'result');
+    if (which === 'result') {
+      refresh(true);
+      if (autoTimer) clearInterval(autoTimer);
+      autoTimer = setInterval(function () { refresh(false); }, 7000);
+    } else if (autoTimer) {
+      clearInterval(autoTimer);
+      autoTimer = null;
+    }
+  }
+  document.getElementById('tabInput').onclick = function () { showPage('input'); };
+  document.getElementById('tabResult').onclick = function () { showPage('result'); };
+
+  function api(options) {
+    // Content-Type을 text/plain으로 보내야 브라우저 사전요청(preflight) 없이 통과합니다.
+    return fetch(SCRIPT_URL + (options.query || ''), {
+      method: options.method || 'GET',
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      headers: options.body ? { 'Content-Type': 'text/plain;charset=utf-8' } : undefined
+    }).then(function (r) { return r.json(); });
+  }
+
+  document.getElementById('submitBtn').onclick = function () {
+    if (submitting) return;
+    if (selected === null) { setMsg('점수를 먼저 선택해 주세요.', 'error'); return; }
+
+    var doneRound = null;
+    try { doneRound = localStorage.getItem('submittedRound'); } catch (e) {}
+    if (doneRound !== null && lastRound !== null && Number(doneRound) === lastRound) {
+      if (!confirm('이미 제출하셨습니다. 다시 제출할까요?')) return;
+    }
+
+    submitting = true;
+    var btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span>제출 중...';
+    setMsg('', '');
+
+    api({ method: 'POST', body: { score: selected } })
+      .then(function (res) {
+        if (res.error) throw new Error(res.error);
+        setMsg('제출이 완료되었습니다. 감사합니다!', 'ok');
+        try { localStorage.setItem('submittedRound', String(res.round)); } catch (e) {}
+        applyResults(res);
+      })
+      .catch(function () {
+        setMsg('제출 중 오류가 발생했습니다. 다시 시도해 주세요.', 'error');
+      })
+      .finally(function () {
+        submitting = false;
+        btn.disabled = false;
+        btn.textContent = '제출하기';
+      });
+  };
+
+  function refresh(showLoading) {
+    if (showLoading) document.getElementById('resultSub').textContent = '데이터를 불러오는 중...';
+    api({ query: '?action=results' })
+      .then(applyResults)
+      .catch(function () {
+        document.getElementById('resultSub').textContent = '데이터를 불러올 수 없습니다.';
+      });
+  }
+  document.getElementById('refreshBtn').onclick = function () { refresh(true); };
+
+  function applyResults(res) {
+    lastRound = res.round;
+    document.getElementById('avgNum').textContent = res.avg.toFixed(1);
+    document.getElementById('ring').style.strokeDashoffset = 653.5 * (1 - Math.min(res.avg, 10) / 10);
+    document.getElementById('resultSub').innerHTML =
+      res.count > 0
+        ? '참여 인원 <b>' + res.count + '명</b>'
+        : '<span class="hint">아직 제출된 점수가 없습니다.</span>';
+
+    var card = document.getElementById('distCard');
+    var rows = document.getElementById('distRows');
+    if (res.count === 0) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    rows.innerHTML = '';
+    var peak = Math.max.apply(null, res.dist.concat([1]));
+    for (var i = 9; i >= 0; i--) {
+      var row = document.createElement('div');
+      row.className = 'dist-row';
+      row.innerHTML =
+        '<div class="lbl">' + (i + 1) + '</div>' +
+        '<div class="track"><div class="fill" style="width:' + Math.round(res.dist[i] / peak * 100) + '%"></div></div>' +
+        '<div class="cnt">' + (res.dist[i] || '') + '</div>';
+      rows.appendChild(row);
+    }
+  }
+
+  document.getElementById('resetBtn').onclick = function () {
+    if (!confirm('모든 점수 데이터를 삭제할까요?\n(새 세션을 시작할 때 사용하세요)')) return;
+    document.getElementById('resultSub').textContent = '초기화 중...';
+    api({ query: '?action=reset' })
+      .then(applyResults)
+      .catch(function () {
+        document.getElementById('resultSub').textContent = '초기화에 실패했습니다.';
+      });
+  };
+</script>
+</body>
+</html>
